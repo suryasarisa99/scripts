@@ -1,0 +1,8 @@
+#! /bin/bash
+
+
+sudo mysql -u root sample < $1 >./sql.output.txt
+#column -t -s "$(printf '\t')" sql.output.txt | hlt --syntax=sql
+column -t -s $'\t' -o  " | " sql.output.txt | hlt --syntax=sql
+#rm ./sql.output.txt
+

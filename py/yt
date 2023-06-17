@@ -1,0 +1,84 @@
+#! /bin/python3
+import argparse
+import os
+import sys
+parser = argparse.ArgumentParser(description="search yt videos")
+# parser.add_argument("search", nargs="+")
+parser.add_argument("-s", "--search", action="store",
+                    nargs="+", help="search videos, or @channel")
+parser.add_argument("-t", "--trending", action="store_true",
+                    help="open youtube trendings")
+parser.add_argument("-i", "--incognito", action="store_true",
+                    help="open in incognito mode")
+parser.add_argument("--subs", action="store_true",
+                    help="open subscriptions page")
+
+parser.add_argument("-d", "--today", action="store_true",
+                    help="filter todays videos")
+parser.add_argument("-w", "--this-week", action="store_true",
+                    help="filter this week videos")
+parser.add_argument("-y", "--this-year", action="store_true",
+                    help="filter this year videos")
+
+parser.add_argument("-p", "--playlist", action="store_true",
+                    help="filter for playlists from search or open playlists in channel ")  # 2
+parser.add_argument("-c", "--channel", action="store_true",
+                    help="filter channels from search")
+parser.add_argument("-v", "--videos", action="store_true",
+                    help="filter videos from search")
+
+parser.add_argument("--shorts", action="store_true",
+                    help="open shorst page")  # 2
+parser.add_argument("--home", action="store_true",
+                    help="opens features page or home page")
+
+args = parser.parse_args()
+
+if args.incognito:
+    incognito = "--private-window"
+else:
+    incognito = ""
+
+# Search
+if args.search and not args.search[0].startswith("@"):
+    if args.today:
+        filter = "&sp=EgQIAhAB"
+    elif args.this_week:
+        filter = "&sp=EgQIAxAB"
+    elif args.this_year:
+        filter = "&sp=EgQIBBAB"
+    elif args.videos:
+        filter = "&sp=EgIQAQ%253D%253D"
+    elif args.channel:
+        filter = "&sp=EgIQAg%253D%253D"
+    elif args.playlist:
+        filter = "&sp=EgIQAw%253D%253D"
+    else:
+        filter = ""
+    os.system(
+        f"""x ff-dev {incognito} https://www.youtube.com/results?search_query='{"+".join(args.search)}{filter}'""")
+# Channel
+elif args.search and args.search[0].startswith("@"):
+    if args.videos:
+        category = "/videos"
+    elif args.shorts:
+        category = "/shorts"
+    elif args.home:
+        category = "/features"
+    elif args.playlist:
+        category = "/playlists"
+    else:
+        category = "/features"
+
+    os.system(
+        f"""x ff-dev {incognito} https://www.youtube.com/{args.search}{category}""")
+# Other
+elif args.trending:
+    os.system(
+        f"""x ff-dev {incognito} https://www.youtube.com/feed/trending""")
+elif args.shorts:
+    os.system(f"x ff-dev https://www.youtube.com/shorts")
+elif args.subs:
+    os.system(f"x ff-dev https://www.youtube.com/feed/subscriptions")
+else:
+    os.system("x ff-dev https://www.youtube.com")

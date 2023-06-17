@@ -1,0 +1,4 @@
+#! /bin/bash
+
+cdata=$(xclip -o -selection clipboard)
+ff-dev $cdata

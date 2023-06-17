@@ -1,0 +1,5 @@
+
+#nohup gnome-text-editor $1 &
+#echo 4580 | sudo -S no ohup gnome-text-editor $1 > /dev/null 2>&1 &
+ 
+echo "4580"|sudo -S x gnome-text-editor $@

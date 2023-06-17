@@ -1,0 +1,27 @@
+#! /usr/bin/python3
+
+import sys
+import os
+import subprocess
+import time
+
+
+dir = []
+deviceId = "156a7e11_a226_49b1_807e_ae0b902046bb"
+# to get device id: ~/.local/share/gnome-shell/extensions/gsconnect@andyholmes.github.io/service/daemon.js -a
+
+os.system(f"echo {sys.argv[1:]} > /home/surya/s.txt")
+
+for i in sys.argv[1:]:
+    if os.path.isdir(i):
+        dir.append(i)
+        base = os.path.basename(i)
+        #os.system(f"zip -rj /home/surya/shared_zips/{base}.zip {i}")
+        os.system(f"""7z a /home/surya/shared_zips/{base}.zip -r {i}/. """)
+        os.system(f"""gapplication action org.gnome.Shell.Extensions.GSConnect device "('{deviceId}', 'shareFile', true, <('/home/surya/shared_zips/{base}.zip', false)>)" """)
+    else : 
+        os.system(f"""gapplication action org.gnome.Shell.Extensions.GSConnect device "('{deviceId}', 'shareFile', true, <('{os.path.abspath(i)}', false)>)" """)
+# time.sleep(2)
+# for i in dir:
+#     os.remove(f"/home/surya/shared_zips/{i}.zip")     
+        

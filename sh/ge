@@ -1,0 +1,4 @@
+
+#nohup gnome-text-editor $1 &
+nohup gnome-text-editor $1 > /dev/null 2>&1 &
+

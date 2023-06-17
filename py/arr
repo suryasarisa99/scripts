@@ -1,0 +1,256 @@
+#! /bin/python3
+import sys
+import os
+import subprocess
+import re
+import shutil
+import argparse
+import time
+import math
+import pickle
+parser = argparse.ArgumentParser(description="Welcome to json data management")
+
+parser.add_argument("-ie", "--insert-end", action="store")
+parser.add_argument("-a", "--append", action="store")
+parser.add_argument("-iat", "--insert-at", nargs=2, action="store")
+parser.add_argument("-ib", "--insert-before", action="store", nargs=2)
+parser.add_argument("-ia", "--insert-after", action="store", nargs=2)
+parser.add_argument("-is", "--insert-start", action="store")
+parser.add_argument("-m", "--multiple", nargs="+", action="store")
+parser.add_argument("-d", "--delete", action="store")
+parser.add_argument("-ds", "--delete-start", action="store_true")
+parser.add_argument("-de", "--delete-end", action="store_true")
+parser.add_argument("-g", "--get", action="store")
+parser.add_argument("-o", "--open", action="store")
+parser.add_argument("-x", "--empty", action="store_true")
+parser.add_argument("-f", '--file', action="store_true")
+
+
+class L():
+    def __init__(self, value, next=None, file=""):
+        self.value = value
+        self.next = next
+        self.file = file
+
+
+# start = L(3, L(4, L(5, L(6))))
+# L(1, 2)
+
+start = None
+with open("/home/surya/temp/ss.pkl", "rb") as file:
+    try:
+        start = pickle.load(file)
+    except:
+        start = None
+
+
+def append(value):
+    global start
+    if not start:
+        start = L(value)
+        if args.file:
+            start.file = f"{os.getcwd()}"
+        return
+    temp = start
+    while temp.next != None:
+        temp = temp.next
+    temp.next = L(value, None, f"{os.getcwd()}")
+
+
+def insert(index, value):
+    global start
+    temp = start
+    count = 0
+    while count < int(index) and temp:
+        temp = temp.next
+        count += 1
+    if temp:
+        temp.value = value
+        temp.file = f"{os.getcwd()}"
+
+
+def insertBegin(value):
+    global start
+    start = L(value, start, f"{os.getcwd()}")
+
+
+def insertAfter(bvalue, value):
+    global start
+    temp = start
+    while temp.value != bvalue:
+        temp = temp.next
+    temp.next = L(value, temp.next, f"{os.getcwd()}")
+
+
+def insertBefore(bvalue, value):
+    global start
+    temp = start
+    while temp.next.value != bvalue:
+        temp = temp.next
+    temp.next = L(value, temp.next, f"{os.getcwd()}")
+
+
+def multiple(*values):
+    for i in values:
+        append(i)
+
+
+def no_of_digits(i):
+    count = 0
+    while math.floor(i) > 0:
+        i /= 10
+        count += 1
+    return count
+
+
+def deleteStart():
+    global start
+    start = start.next
+
+
+def deleteEnd():
+    global start
+    temp = start
+    while temp.next.next:
+        temp = temp.next
+    temp.next = None
+
+
+def delete(value):
+    global start
+    temp = start
+    while temp.next.value != value:
+        temp = temp.next
+    temp.next = temp.next.next
+
+
+def get(index):
+    global start
+    temp = start
+    count = 0
+    while count < int(index) and temp != None:
+        temp = temp.next
+        count += 1
+    if temp:
+        print(temp.value)
+        return temp
+        # os.system(f"echo {temp.value} | xclip -selection clipboard")
+    else:
+        print("not Found")
+
+
+def line(size, char):
+    for i in range(size):
+        print(char, end="")
+    print("")
+
+
+def suck(temp, terminalLen, count):
+    total_len = 0
+    excess = False
+    columns = 0
+    while temp:
+        if total_len + 5 < terminalLen:
+            prevLen = total_len
+            if type(temp.value) is int:
+                total_len += no_of_digits(temp.value) + 8 + no_of_digits(count)
+            else:
+                total_len += len(temp.value) + 8 + no_of_digits(count)
+            columns += 1
+            prevTemp = temp
+            temp = temp.next
+            count += 1
+        else:
+            excess = True
+            break
+    if total_len + 1 > terminalLen:
+        total_len = prevLen
+        columns -= 1
+        temp = prevTemp
+        excess = True
+        count -= 1
+    return total_len+1, columns, excess, temp, count
+
+
+def display():
+    total_len = 0
+    count = 0
+    global start
+    temp = start
+    temp1 = start
+    xCount = 0
+    # xCountOffset = 0
+    terminalLen = shutil.get_terminal_size().columns
+
+    while True:
+        total_len, columns, excess, temp1, xCount = suck(
+            temp1, terminalLen, xCount)
+        line(total_len, '─')
+        for i in range(columns):
+            print(f"│  ({count}) {temp.value}  ", end="")
+            temp = temp.next
+            count += 1
+        print("\b│")
+        line(total_len, '─')
+        if not excess:
+            break
+
+
+args = parser.parse_args()
+if args.insert_at:
+    index, data = args.insert_at
+    # if args.file:
+    #     data = os.getcwd() + "/" + data
+    insert(index, data)
+if args.insert_start:
+    # if args.file:
+    #     args.insert_start = os.getcwd() + "/" + args.insert_start
+    insertBegin(args.insert_start)
+if args.insert_end:
+    # if args.file:
+    #     args.insert_end = os.getcwd() + "/" + args.insert_end
+    append(args.insert_end)
+if args.append:
+    # if args.file:
+    #     args.append = os.getcwd() + "/" + args.append
+    append(args.append)
+if args.insert_after:
+    # if args.file:
+    #     args.insert_after = os.getcwd() + "/" + args.insert_after
+    a, b = args.insert_after
+    insertAfter(a, b)
+if args.multiple:
+    # if args.file:
+    # args.insert_ = os.getcwd() + "/" + args.append
+    multiple(*args.multiple)
+if args.insert_before:
+    bvalue, data = args.insert_before
+    # if args.file:
+    #     data = os.getcwd() + "/" + data
+    insertBefore(bvalue, data)
+if args.delete_start:
+    deleteStart()
+if args.delete_end:
+    deleteEnd()
+if args.delete:
+    delete(args.delete)
+if args.get:
+    get(args.get)
+if args.open:
+    node = get(args.open)
+    print(node.file)
+    # print(f"x xdg-open '{node.file}'/'{node.value}")
+    if "www" in node.value or "http" in node.value or ".com" in node.value:
+        os.system(f"x ff-dev {node.value}")
+    else:
+        os.system(f"xdg-open '{node.file}'/'{node.value}'")
+if args.empty:
+    start = None
+if not args.get and not args.open and start:
+    display()
+
+with open("/home/surya/temp/ss.pkl", "wb") as file:
+    pickle.dump(start, file)
+
+# dict = {}
+# print(type(1) is int)

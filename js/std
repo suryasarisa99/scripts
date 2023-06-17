@@ -1,0 +1,60 @@
+#! /bin/node
+
+let path = require("path");
+let fs = require("fs").promises;
+// file = path.join("/home/surya/Desktop/nodejs/student/students.json");
+file = path.join("/home/surya/Desktop/2-2/students.json");
+async function getData() {
+  let data = await fs.readFile(file, "utf-8");
+  return JSON.parse(data);
+}
+
+found = 0;
+failed = 0;
+marks = 0;
+failed_subjects = [];
+
+getData().then((data) => {
+  let id = process.argv[2] || "46";
+  let regId =
+    id?.length === 10 ? id?.toLowerCase() : `21U41A05${id?.toUpperCase()}`;
+  data.forEach((obj) => {
+    if (obj.regId === regId) {
+      console.log(obj);
+      found = 1;
+      let { subjects, others, labs } = obj;
+      for (let [i, j] of Object.entries(subjects)) {
+        marks += grades[j.grade] * 3;
+        if (j.grade == "F") {
+          failed++;
+          failed_subjects.push(i);
+        }
+      }
+      for (let [i, j] of Object.entries(labs)) {
+        marks += grades[j.grade] * 1.5;
+        if (j.grade == "F") {
+          failed++;
+          failed_subjects.push(i);
+        }
+      }
+      console.log(`Points:${marks / 19.5}`);
+      process.stdout.write(`Failed Subjects (${failed}): `);
+      for (failed_sub of failed_subjects) {
+        process.stdout.write(failed_sub + "  ");
+      }
+      console.log();
+    }
+  });
+  if (!found) console.log("No Students In this List");
+});
+
+function toPoints() {
+  switch (grade) {
+    case "A+":
+      10;
+    case "A":
+      9;
+  }
+}
+
+grades = { "A+": 10, A: 9, B: 8, C: 7, D: 6, E: 5, F: 0 };

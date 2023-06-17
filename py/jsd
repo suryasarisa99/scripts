@@ -1,0 +1,55 @@
+#! /bin/python3
+
+import os
+import json
+import sys
+
+from pygments import highlight
+from pygments.lexers import JsonLexer
+from pygments.formatters import TerminalFormatter
+
+file=os.path.join("/home/surya/Desktop/2-2/students.json")
+# file=os.path.join("/storage/emulated/0/students.json")
+
+found = 0
+failed = 0
+marks = 0
+failed_subjects = []
+grades = { "A+": 10, "A": 9, "B": 8, "C": 7, "D": 6, "E": 5, "F": 0 }
+
+with open(file) as studentData:
+    data=json.load(studentData)
+
+print(sys.argv)
+if len(sys.argv)==2:
+    id=sys.argv[1]
+else:
+    id="46"
+# id=sys.argv[1] or "46"
+regId = id.upper() if len(id)== 10 else f'21U41A05{id.upper()}'
+for obj in data:
+    if obj["regId"]==regId:
+        jsonStrigfyObj = json.dumps(obj,indent=3)
+        subjects=obj["subjects"]
+        others=obj["others"]
+        labs=obj["labs"]
+        highlighted_str = highlight(jsonStrigfyObj, JsonLexer(), TerminalFormatter())
+        print(highlighted_str)
+        for i,j in subjects.items():
+            marks += grades[j["grade"]] *3
+            if(j["grade"] == "F"):
+                failed += 1
+                failed_subjects.append(i)
+        for i,j in labs.items():
+            marks += grades[j["grade"]] *1.5
+            if(j["grade"] == "F"):
+                failed += 1
+                failed_subjects.append(i)
+        print(f'Points:{marks/19.5}')
+        print(f'Failed Subjects: ({failed}): ',end="")
+        for i in failed_subjects:
+            print(i,end="")
+        print()
+        break
+else:
+    print("Incorrect Regester Id: {regId}")

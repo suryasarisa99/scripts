@@ -1,0 +1,87 @@
+#! /bin/python3
+import argparse
+from colored import fg, bg, attr
+import os
+import json
+import re
+negleted = []
+with open(os.path.expanduser("~/Desktop/scripts/data.json")) as data:
+    d = json.load(data)
+    negleted = d["negleted"]
+
+
+def dir_p(file):
+    return f'{fg(201)}{file}{attr("reset")}'
+
+
+def file_p(file):
+    return f'{fg(63)}{file}{attr("reset")}'
+
+
+def empty_p(file):
+    return f'{fg("red")}[{attr("reset")}{file}{fg("red")}]{attr("reset")}'
+
+
+SKIPPED = f'  [{fg("red")} SKIPPED {attr("reset")}]'
+indent = 0
+
+
+def spaces():
+    global indent
+    for i in range(1, indent, 2):
+        print("  |", end="")
+
+# parser = argparse.ArgumentParser(description="INFO About ArgParser")
+# parser.add_argument("f", help="Input File Name")
+# parser.add_argument("-a", "-action", help="what action u want")
+# parser.add_argument("-l", action="store_true", help="Enables Lines")
+# args = parser.parse_args()
+# if args.a:
+#     print("Action: " + args.a)
+# if args.l:
+# print("flag Enabled")
+
+
+found = 0
+
+pattern = re.compile(r'^[^._]')
+
+
+def ls():
+    global indent
+    l = [i for i in os.listdir() if pattern.match(i)]
+    for i in l:
+        found = 0
+        if os.path.isdir(i):
+            spaces()
+            if len(os.listdir(i)) == 0:
+                print(empty_p(dir_p(i)))
+                continue
+            else:
+
+                print(f' >:{dir_p(i)}')
+
+                for neg in negleted:
+                    if i == neg:
+                        spaces()
+                        print(SKIPPED)
+                        found = 1
+                        break
+                if found == 1:
+                    continue
+
+            indent += 2
+            os.chdir(i)
+            ls()
+        else:
+            spaces()
+            print(f'{file_p(i)}')
+
+    os.chdir("..")
+    indent -= 2
+
+
+ls()
+
+
+# os.get

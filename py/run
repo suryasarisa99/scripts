@@ -1,0 +1,50 @@
+#! /usr/bin/python3
+import os
+import sys
+import re
+with open(sys.argv[1], "r")as file:
+    text = file.read()
+
+
+def getCommand(path):
+    file = os.path.basename(path)
+    dir = os.path.dirname(path)
+    split_result = file.split(".")
+
+    if len(split_result) == 2:
+        basename, ex = split_result
+    else:
+        basename = split_result[0]
+        ex = "none"
+    dir = dir.strip()
+    if len(dir) > 0:
+        os.chdir(dir)
+
+    if ex == "py" or "input(" in text or "print(" in text or "/bin/python3" in text:
+        return f"python3 {file}"
+    elif ex == "js" or "console.log(" in text or "/bin/node" in text:
+        return f"node {file}"
+    elif ex == "java" or "public static void main" in text:
+        if ex == "java":
+            return f"javac {file} && java {basename} && rm {basename}.class"
+        else:
+            match = re.match(
+                r"public class (?P<class>[a-zA-z0-9$_]*)({?)", text)
+            className = match.group("class")
+            print(className)
+            with open(f"/home/surya/temp/run_files/{className}.java", "w+") as javaFile:
+                javaFile.write(text)
+            os.chdir("/home/surya/temp/run_files")
+            return f"javac {className}.java && java {className} && rm {className}.class"
+
+    elif ex == "cpp" or "iostream" in text:
+        return f"g++ {file} -o {basename} && ./{basename} && rm {basename}"
+    elif ex == "sh" or "/bin/bash" in text:
+        return f"chmod +x {file} && ./{file}"
+
+
+print(sys.argv[1])
+command = f"""gnome-terminal -- bash -c '{getCommand(sys.argv[1])} && echo ""; exec bash' """
+# command = f"""{getCommand(sys.argv[1])} """
+print(command)
+os.system(command)

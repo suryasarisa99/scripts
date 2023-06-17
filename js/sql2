@@ -1,0 +1,132 @@
+#! /usr/bin/node
+let fs = require("fs/promises");
+let chalk = require("chalk");
+const { exec } = require("child_process");
+const { write } = require("fs");
+let p = "/home/surya/Desktop/mysql";
+async function read() {
+  // let data = await fs.readFile(process.cwd() + "/" + process.argv[2], "utf-8");
+  let data = await fs.readFile(process.cwd() + "/" + "sample.sql", "utf-8");
+  let lines = data.split("\n");
+  lines = lines.filter((line) => !line.startsWith("--"));
+  lines = lines.join("\n");
+  let l = lines.split(";");
+  console.log(l);
+  l = l.map((i) => i.trim());
+  l = l.filter((i) => i.length > 0);
+  // console.log(l);
+  // for(let i of l)
+  // let promises = l.map((com) => executeCommand(com));
+  l.map(async (com) => {
+    let data = await executeCommand(com);
+    console.log(data);
+  });
+  // await Promise.all(promises);
+}
+
+async function executeCommand(query) {
+  return new Promise(async (resolve, reject) => {
+    // await d(query);
+    // console.log(query);
+    if (query.toLowerCase().includes("select")) {
+      exec(
+        `echo "${query}" |  mysql -u surya -ppassword sample | column -t -s $'\t' -o "  |  " | hlt --syntax=sql`,
+        async (error, stdout, stderr) => {
+          if (stderr) {
+            let errors = stderr.split("\n");
+            // console.log(errors);
+            if (errors.length === 3) {
+              console.log(query);
+            }
+            for (e = 1; e < errors.length; e++) console.log(errors[e]);
+          }
+          format(stdout);
+          resolve();
+        }
+      );
+    } else {
+      await writeQuery(query);
+      exec(
+        ` mysql -u surya -ppassword sample  < ${process.cwd()}/split.sql`,
+        async (error, stdout, stderr) => {
+          if (stderr) {
+            let errors = stderr.split("\n");
+            if (errors.length === 3) {
+              console.log(query);
+            }
+            for (e = 1; e < errors.length; e++) console.log(errors[e]);
+          }
+          // console.log(stdout);
+          resolve(stdout);
+        }
+      );
+    }
+  });
+}
+
+async function writeQuery(query) {
+  let data = await fs.writeFile("split.sql", query);
+  return data;
+}
+
+async function d(query) {
+  return new Promise((resolve, reject) => {
+    exec(`ls`, () => {
+      resolve();
+    });
+  });
+}
+function format(table) {
+  let rows = table.split("\n");
+  let maxLength = getMaxLength(rows);
+  let line = getLine(maxLength);
+  console.log(line);
+  console.log(
+    " |  " +
+      removeColorsAndApplyNew(rows[0], "yellow") +
+      " ".repeat(maxLength + 2 - getVisibleLength(rows[0])) +
+      " |"
+  );
+  console.log(line);
+
+  for (let i = 1; i < rows.length - 1; i++) {
+    let row = rows[i].trim();
+    let rowWithPipe =
+      " |  " + row + " ".repeat(maxLength + 2 - getVisibleLength(row)) + " |";
+    console.log(rowWithPipe);
+  }
+  console.log(line);
+}
+
+function getVisibleLength(str) {
+  var pattern = /(\x1B\[[0-9;]*m|<\/?[^>]+(>|$))/g;
+  var visibleText = str.replace(pattern, "");
+  var length = visibleText.length;
+  return length;
+}
+function getMaxLength(rows) {
+  let maxSize = -1;
+  let cur_len = 0;
+  for (let row of rows) {
+    cur_len = getVisibleLength(row);
+    if (maxSize < cur_len) maxSize = cur_len;
+  }
+  return maxSize;
+}
+function getLine(count) {
+  let str = " ";
+  for (let i = 0; i < count + 6; i++) {
+    str += "-";
+  }
+  return str + "-";
+}
+function removeColorsAndApplyNew(string, newColor) {
+  const pattern = /(\x1B\[[0-9;]*m|<\/?[^>]+(>|$))/g;
+  const strippedString = string.replace(pattern, "");
+  const coloredString = chalk[newColor](strippedString);
+  return coloredString;
+}
+
+read();
+
+// writeQuery("hillo surya").then((res) => console.log(res));

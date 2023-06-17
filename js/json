@@ -1,0 +1,45 @@
+#! /bin/node
+
+let fs = require("fs").promises;
+let path = require("path");
+const { exec } = require("child_process");
+
+// execute ls command and print the output
+
+let file = path.join("/home/surya/Desktop/scripts", "data.json");
+async function getData() {
+  let data = await fs.readFile(file);
+  return JSON.parse(data);
+}
+async function addData(item) {
+  let data = await getData();
+  data.negleted.push(...item);
+  fs.writeFile(file, JSON.stringify(data, null, 3));
+}
+async function removeData(items) {
+  let data = await getData();
+  items.forEach((item) => {
+    data.negleted.splice(data.negleted.indexOf(item), 1);
+  });
+  fs.writeFile(file, JSON.stringify(data, null, 3));
+}
+
+switch (process.argv[2]) {
+  case "-a": {
+    addData(process.argv.splice(3));
+    break;
+  }
+  case "-r": {
+    removeData(process.argv.splice(3));
+    break;
+  }
+  case "-g": {
+    getData().then((res) => console.log(res));
+    break;
+  }
+  case "-h": {
+    exec(`hlt ${file}`, (error, stdout, stderr) => {
+      console.log(`json: ${stdout}`);
+    });
+  }
+}

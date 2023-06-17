@@ -1,0 +1,74 @@
+#! /bin/bash
+path="."
+lines=true
+depth=3
+info=false
+d=-1
+#if [ $# -ge 1 ]; then
+#  path="$1"
+#fi
+
+cd $path
+indentation=0
+while getopts "ld:p:i" opts; do
+  case $opts in 
+    l) lines=false  ;;
+    d) depth=$OPTARG ;;
+    p) path=$OPTART ;;
+    i) info=true;;
+    
+  esac
+ done
+spaces(){
+    if [ $lines = true ]; then
+      for j in $(seq 1 2 $indentation); do
+         echo -en "\033[94m  |\033[0m" ; done
+    else
+      for j in $(seq 1 2 $indentation); do
+         echo -n "  " ; done
+    fi
+}
+pdir (){
+    ((d++))
+    if [ $d -le $depth ] ;then 
+      for i in *; do
+        if [ -d "$i" ]; then #if Directory
+           spaces
+           echo -en "\033[1;32m>:$i\033[0m"
+           if [ $info = true ]; then echo -n "  $PWD"; fi;
+           echo
+            if 
+            [ "$i" = "node_modules" ] || 
+            [ "$i" = "highlight" ] ||
+            [ "$i" = "main" ]  #If Negleted
+            then
+              #echo "  [ Skiped ]"
+              spaces
+              echo -e "\033[93m  [ Skipped ]\033[0m"  
+              continue
+            fi
+            
+            ((indentation+=2))  # Recursive
+            cd "$i"
+            pdir "$i"
+        else              # if Files
+            spaces
+            if [ "$i" = "*" ]; then
+               echo -e "\033[91m[ Empty ]\033[0m"
+            else
+                if [ $info = true ]; then echo $i $PWD; else echo $i ; fi;
+                
+            fi
+        fi
+    done
+   #else  #if Depth Exceeded
+     #spaces
+     #echo "[ Depth Exceeded ]"
+  fi
+
+    ((indentation-=2))   # if Directory is Completed
+    cd ..
+      ((d--))
+}
+
+pdir

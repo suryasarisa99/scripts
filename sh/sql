@@ -1,0 +1,106 @@
+#! /usr/bin/python3
+from colored import fg, attr
+import os
+import subprocess
+import re
+import sys
+import codecs
+co = subprocess.run
+# co = os.system
+
+path = os.path.abspath(".")
+print(path + "/" + sys.argv[1])
+
+
+def getLine(count):
+    str = " "
+    for i in range(0, count + 7):
+        str += "─"
+    return str
+
+
+def getVisibleLength(str):
+    pattern = r'(\x1B\[[0-9;]*m|<\/?[^>]+(>|$))'
+    visible_text = re.sub(pattern, '', str)
+    length = len(visible_text)
+    return length
+
+
+def getMaxLength(rows):
+    maxSize = -1
+    for i in rows:
+        len = getVisibleLength(i)
+        if len > maxSize:
+            maxSize = len
+    return maxSize
+
+
+def format(table):
+    rows = table.split("\n")
+    maxLength = getMaxLength(rows)
+    line = getLine(maxLength)
+    print(line)
+    print(" │  " + rows[0] + " "*(maxLength +
+          2 - getVisibleLength(rows[0])) + " │")
+    print(line)
+    for i in range(1, len(rows)-1):
+        row = rows[i].strip()
+        rowFormated = " │  " + row + " " * \
+            (maxLength + 2 - getVisibleLength(row)) + " │"
+        print(rowFormated)
+    print(line)
+
+
+def handleErrors(stderr: str):
+    stderr = stderr.splitlines()
+    return ("\n".join(stderr[1:]), True if len(stderr) >= 2 else False)
+
+
+def executeQuery(query):
+    cmd1 = f"""echo "{query}" │  mysql -u surya -ppassword sample │ column -t -s $'\t' -o "  │  " | hlt --syntax=sql"""
+    # cmd1 = f"""echo "{query}" |  mysql -u surya -p sample """
+    cmd2 = f"""mysql -u surya -ppassword  sample  < {path}/split.sql"""
+    if (query.lower().startswith("select") or query.lower().startswith("show")):
+        # result = co(cmd1,shell=True,stderr=subprocess.DEVNULL)
+        # result = co(cmd1)
+
+        proc = subprocess.Popen(
+            cmd1, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        result = proc.stdout.read()
+        errors = proc.stderr.read()
+        errors, hasError = handleErrors(errors)
+        if (hasError):
+            # print(query)
+            os.system(f"""echo "{query}" | bat -l sql""")
+            print(errors)
+        else:
+            format(result)
+    else:
+        with open(f"{path}/split.sql", "w+") as file:
+            file.write(query)
+        proc = subprocess.Popen(
+            cmd2, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        result = proc.stdout.read()
+        errors = proc.stderr.read()
+        errors, hasError = handleErrors(errors)
+        if (hasError):
+            # print(query)
+            os.system(f"""echo "{query}" | bat -l sql""")
+
+            print(errors)
+        print(result)
+
+
+def surya():
+    # with  open(f"./sample.sql") as f:
+    with open(f"./{sys.argv[1]}") as f:
+        data = f.read()
+        data = data.split(";")
+        data = list(map(lambda x: x.strip(), data))
+        data = list(filter(lambda x:  x != "" and (
+            not x.startswith("--")), data))
+    for i in data:
+        executeQuery(i)
+
+
+surya()

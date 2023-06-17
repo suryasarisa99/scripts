@@ -1,0 +1,101 @@
+#! /usr/bin/python3
+import os
+import sys
+import re
+import subprocess
+from javalang.parser import parse
+
+
+cmd = """printf '%s' "$(xclip -o -selection clipboard)" """
+data = subprocess.Popen(cmd, stderr=subprocess.PIPE,
+                        stdout=subprocess.PIPE, shell=True, text=True)
+output, err = data.communicate()
+text = output
+# print(f"clip-board-err: {err}")
+# print(f"clip-board-data: \n" + text)
+path = "/home/surya/temp/run_files"
+
+
+def getCommand():
+    # file = os.path.basename(path)
+    # dir = os.path.dirname(path)
+    # split_result = file.split(".")
+
+    # if len(split_result) == 2:
+    #     basename, ex = split_result
+    # else:
+    #     basename = split_result[0]
+    #     ex = "none"
+    # dir = dir.strip()
+
+    ex = "none"
+    # if len(dir) > 0:
+    #     os.chdir(dir)
+    os.chdir("/home/surya/temp/run_files")
+    baseName = "sample"
+    global text
+    if ex == "java" or "public static void main" in text:
+        if ex == "java":
+            # return f"javac {file} && java {basename} && rm {basename}.class"
+            pass
+        else:
+
+            text = re.sub(r"www.Jntufastupdates.com\n\d?\d?", "", text)
+            global className
+            global ext
+            match = re.search(
+                r"public\s+class\s+(?P<class>[a-zA-Z0-9$_]+)", text)
+            if not match:
+                match = re.search(
+                    r"class (?P<class>[a-zA-Z0-9$_]+)[\s\S]{,5}{[\s\S]{,10}public static void main\(.*?\)", text)
+            ext = "java"
+            if (not match):
+                print(text)
+            className = match.group("class")
+            # print(className)
+            createFile(className, "java", text)
+            return f"javac {className}.java && java {className} && rm {className}.class"
+    elif ex == "py" or "input(" in text or "print(" in text or "/bin/python3" in text:
+        fileName = baseName + ".py"
+        createFile(fileName, "py", text)
+        return f"python3 {fileName}"
+    elif ex == "js" or "console.log(" in text or "/bin/node" in text:
+        fileName = baseName + ".js"
+        createFile(fileName, "js", text)
+        return f"node {fileName}"
+
+    # elif ex == "cpp" or "iostream" in text:
+    #     return f"g++ {file} -o {basename} && ./{basename} && rm {basename}"
+    # elif ex == "sh" or "/bin/bash" in text:
+    #     return f"chmod +x {file} && ./{file}"
+
+
+def createFile(file, ex, data):
+    print(f"file: {file}.{ex}")
+    data = re.sub(r"www.Jntufastupdates.com\n\d\d", "", data)
+    with open(f"{path}/{file}.{ex}", "w+") as f:
+        f.write(data)
+    if (ex == "java"):
+        a = f"java -jar ~/Downloads/google-java-format-1.17.0-all-deps.jar --replace {path}/{file}.{ex}"
+        os.system(a)
+        # os.system(f"bat {path}/{file}.{ex}")
+    if (ex == "js"):
+        os.system(f"prettier --write {path}{file}/.{ex}")
+
+
+# print(sys.argv[1])
+# command = f"""gnome-terminal -- bash -c '{getCommand(sys.argv[1])} && echo ""; exec bash' """
+command = f"""{getCommand()} """
+# print("command: " + command)
+proc = subprocess.Popen(command, stderr=subprocess.PIPE,
+                        stdout=subprocess.PIPE, shell=True, text=True)
+data, err = proc.communicate()
+print(data)
+if err:
+    print("Error")
+    print(err)
+    # os.system(f"bat {path}/{className}.{ext}")
+    os.system(f"ge {path}/{className}.{ext}")
+else:
+    if "y" == input("open file: "):
+        os.system(f"ge {path}/{className}.{ext}")

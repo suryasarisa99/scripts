@@ -1,0 +1,125 @@
+#! /usr/bin/python3
+import os
+import re
+import subprocess
+import argparse
+import sys
+
+parser = argparse.ArgumentParser(
+    description="Welcome to ClipBoard Runner By Jaya Surya. It Runs The Code Which is On Your Clipboard. It Detects the Language and Runs it")
+parser.add_argument("-n", "--new-window", action="store_true",
+                    help="Runs The Code in New Window, required when u using keyboard shortcut key to run")
+parser.add_argument("-s", "--show", action="store_true",
+                    help="Showes The Content Of File")
+parser.add_argument("-d", "--dynamic", action="store_true",
+                    help="Showes The Options, Useful when using -n flag")
+parser.add_argument("-o", "--open-file", default="gedit", action="store",
+                    metavar="<editor>",  help="choose type of editor to Open File ( default gedit )")
+# parser.add_argument("")
+
+
+def run(cmd):
+    return subprocess.Popen(cmd, stderr=subprocess.PIPE,
+                            stdout=subprocess.PIPE, shell=True, text=True).communicate()
+
+
+path = "/home/surya/temp/run_files"
+curPath = os.getcwd()
+cmd = """printf '%s' "$(xclip -o -selection clipboard)" """
+text, err = run(cmd)
+# print(f"clip-board-err: {err}")
+# print(f"clip-board-data: \n" + text)
+
+
+def getCommand(text):
+    os.chdir("/home/surya/temp/run_files")
+    baseName = "sample"
+    if "public static void main" in text:
+        text = re.sub(r"www.[jJ]ntufastupdates.com\n\d?\d?", "", text)
+        match = re.search(
+            r"public\s+class\s+(?P<class>[a-zA-Z0-9$_]+)", text)
+        if not match:
+            match = re.search(
+                r"class (?P<class>[a-zA-Z0-9$_]+)[\s\S]{,5}{[\s\S]{,10}public static void main\(.*?\)", text)
+        if (not match):
+            print(text)
+        className = match.group("class")
+        # print(className)
+        createFile(className, "java", text)
+        return [f"javac {className}.java && java {className} && rm {className}.class", className+".java"]
+    elif "input(" in text or "print(" in text or "/bin/python3" in text:
+        fileName = baseName + ".py"
+        createFile(baseName, "py", text)
+        return [f"python3 {fileName}", fileName]
+    elif "console.log(" in text or "/bin/node" in text:
+        fileName = baseName + ".js"
+        createFile(baseName, "js", text)
+        return [f"node {fileName}", fileName]
+    elif "iostream" in text:
+        return [f"g++ {baseName}.cpp -o {baseName} && ./{baseName} && rm {baseName}", baseName+".cpp"]
+    elif "/bin/bash" in text or "/bin/zsh" in text or "/bin/fish" in text or "echo" in text:
+        return f"chmod +x {baseName} && ./{baseName}"
+    elif ("select" or "table" or "alter") in text:
+        return f""
+
+
+def createFile(file, ex, data):
+    print(f"file: {file}.{ex}")
+    data = re.sub(r"www.Jntufastupdates.com\n\d\d", "", data)
+    with open(f"{path}/{file}.{ex}", "w+") as f:
+        f.write(data)
+    if (ex == "java"):
+        formatCmd = f"java -jar ~/Downloads/google-java-format-1.17.0-all-deps.jar --replace {path}/{file}.{ex}"
+        os.system(formatCmd)
+        # os.system(f"bat {path}/{file}.{ex}")
+    if (ex == "js"):
+        os.system(f"prettier --write {path}/{file}.{ex}")
+
+
+args = parser.parse_args()
+
+try:
+    cmd, fileName = getCommand(text)
+except:
+    print("Unknown Language -- language Can't Be detected")
+    print("check-clipboard: ")
+    os.system(f"echo {text} | bat --file-name 'Clip Board'")
+    sys.exit()
+
+
+if args.open_file != "nano":
+    sub_sub_cmd = "x " + args.open_file
+else:
+    sub_sub_cmd = args.open_file
+open_cmd = f"{sub_sub_cmd} {path}/{fileName}"
+show_cmd = f"bat {path}/{fileName}"
+exit_cmd = "exit"
+
+if args.dynamic:
+    dynamic = f"""echo -n "o)open  s)show q)quit: " && read ch && case $ch in  o)x {open_cmd};; s) {show_cmd};; q) {exit_cmd};; esac"""
+else:
+    dynamic = ""
+if args.new_window:
+    finalCmd = f"""gnome-terminal -- bash -c '{cmd} && {dynamic} && {show_cmd if args.show else None} && {open_cmd if args.open_file else None}  && zsh ; exec bash' """
+    # finalCmd = f"""gnome-terminal -- bash -c '{cmd} && echo "" && echo -n "o) open  s) show q) quit: " && read ch ; exec bash' """
+else:
+    finalCmd = f"""{cmd} && {open_cmd if args.open_file else None} && {show_cmd if args.show else None} """
+data, err = run(finalCmd)
+
+print(data)
+os.chdir(curPath)
+err = err.splitlines()
+if len(err) == 2:
+    print("Error")
+    print(err)
+    # os.system(f"bat {path}/{className}.{ext}")
+    os.system(f"x gedit {path}/{fileName}")
+else:
+    if args.dynamic and not args.new_window:
+        ch = input("o) open file s) show file q)to quit: ")
+        if ch == "s":
+            os.system(show_cmd)
+        elif ch == "o":
+            os.system(open_cmd)
+        elif ch == "q":
+            os.system(exit_cmd)

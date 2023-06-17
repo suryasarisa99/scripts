@@ -1,0 +1,164 @@
+#! /bin/python3
+import sys
+import argparse
+import subprocess
+import numpy as np
+from colorama import init, Fore, Back, Style
+
+
+parser = argparse.ArgumentParser(description="hi")
+parser.add_argument("-t", "--head", action="store_true")
+parser.add_argument("-f", "--footer", action="store_true")
+# parser.add_argument("-f", "--footer", action="store_true")
+parser.add_argument("-d", "--dotted", action="store_true")
+parser.add_argument("-a", "--align", action="store_true")
+parser.add_argument("--split", action="store")
+parser.add_argument("--ignore", action="store", default="#")
+parser.add_argument("--log", action="store_true")
+parser.add_argument("-sb", "--spaces_at_borders",
+                    action="store", metavar="width", type=int, help="No of Spaces at Borders")
+# parser.add_argument("-a", "--align", action="store", metavar="<position>")
+parser.add_argument("-s", "--spaces", action="store",
+                    metavar="<spaces>", type=int, help="Extra Width for Each Cell right side")
+parser.add_argument("-fix", "--fix", action="store",
+                    metavar="<fix>", type=int, help="Extra Width for Each Cell right side")
+parser.add_argument("--force", action="store_true",
+                    help="Extra Width for Each Cell right side")
+parser.add_argument("-r", "--rows", action="store_true",
+                    help="Extra Width for Each Cell right side")
+parser.add_argument("file", nargs="?")
+# import
+data = "hi\t\tHow\t\tAre\n\t\tYou\t\tThere\t\tDone\n\t\tOh\t\tMy\t\tGod"""
+
+args = parser.parse_args()
+
+line_type = "-" if args.dotted else "─"
+spaces = args.spaces if args.spaces != None else 2
+align = "center" if args.align else "ljust"
+spaces_at_borders = args.spaces_at_borders if args.spaces_at_borders != None else 1
+
+
+match args.split:
+    case "tab":
+        args.split = "\t"
+    case "newline":
+        args.split = "\n"
+
+
+def run(cmd):
+    return subprocess.Popen(cmd, stderr=subprocess.PIPE,
+                            stdout=subprocess.PIPE, shell=True, text=True).communicate()
+
+
+def format(text):
+    args.split = args.split if args.split else (
+        " " if text.count(" ") > text.count("\t") else "\t")
+
+    # rows = list(filter(lambda x: x.strip() != '', text.split("\n")))
+    # matrix = list(map(lambda x: x.split(splitAt), rows))
+    matrix = []
+    try:
+        for row in text.split("\n"):
+            temp = []
+            if row != "" and not row.startswith(args.ignore):
+                for col in row.split(args.split):
+                    if col.strip() != "":
+                        temp.append(col.strip(" "))
+                matrix.append(temp)
+        matrixB = matrix
+        matrix = np.array(matrix)
+
+    except:
+        matrix = matrixB
+
+        max = -1
+        for i in matrix:
+            len_ = len(i)
+            if len_ > max:
+                max = len_
+        for i in matrix:
+            if len(i) < max:
+                print("fucked up")
+                i.extend(["  " for i in range(max-len(i))])
+    if args.log:
+        for i in matrix:
+            print(i)
+    if args.fix:
+        matrix = [i for row in matrix for i in row]
+        len_ = len(matrix)
+        shapes = []
+        cnt = 0
+        for i in range(1, len_//2 + 1):
+            if len_ % i == 0:
+                print(f"{cnt}) row: {i}, columns:  {len_ // i}")
+                shapes.append((i, len_//i))
+                cnt += 1
+        # shapeSelect = int(input("select Input: "))
+        shapeSelect = args.fix
+        matrix = np.reshape(matrix, shapes[shapeSelect])
+
+    widths = []
+    for row in matrix:
+        temp = []
+        for colum in row:
+            temp.append(len(colum))
+        widths.append(temp)
+
+    if args.log:
+        print(widths)
+        print(np.array(widths))
+
+    narr = np.array(widths, dtype=object)
+    widths = np.max(narr, axis=0)
+    if args.log:
+        print(widths)
+    # print(np.array(matrix))
+
+    line = Fore.MAGENTA + Style.BRIGHT + line_type*(sum(widths) + len(widths) *
+                                                    (spaces + spaces_at_borders*2 + 1) + 1) + Style.RESET_ALL
+    dash = Fore.MAGENTA + Style.BRIGHT + \
+        ('|' if args.dotted else "│") + Style.RESET_ALL
+
+    print()
+    if not args.head:
+        print(Back.MAGENTA + "Table".center((sum(widths) + len(widths) *
+                                             (spaces + spaces_at_borders*2 + 1) + 1), ' ') + Style.RESET_ALL)
+    # print(Fore.RED + Back.BLUE + "Table".center(15, ' ') + Style.RESET_ALL)
+    print(line)   # Top Line  ---------
+    for j, row in enumerate(matrix):
+        # Head Row Line  # Fotter Row Line --------
+
+        for i, column in enumerate(row):
+            if (args.head and j == 0):    # top row colors
+                print(
+                    f"{dash}{' '*spaces_at_borders}{ Fore.MAGENTA + Style.BRIGHT+  column.title().center(widths[i] + spaces,' ')+ Style.RESET_ALL}{' '*spaces_at_borders}", end="")
+            else:
+                print(
+                    f"{dash}{' '*spaces_at_borders}{Fore.GREEN + getattr(column, align )(widths[i] + spaces,' ') + Style.RESET_ALL}{' '*spaces_at_borders}", end="")
+
+        print(dash)
+        if args.rows and j != len(matrix)-1:
+            print(line)
+        elif (args.head and j == 0) or (args.footer and len(row)-2 == j):
+            print(line)
+    print(line)   # Bottom line  ---------
+    print()
+
+
+if args.file:
+    data, text = run(f""" cat {args.file}""")
+    format(data)
+elif not sys.stdin.isatty():
+    input_text = sys.stdin.read()
+    format(input_text)
+else:
+    print("Enter input (press Ctrl+D or Ctrl+Z to finish):")
+    input_lines = []
+    while True:
+        try:
+            line = input()
+            input_lines.append(line)
+        except EOFError:
+            break
+    input_text = "\n".join(input_lines)
+    format(input_text)
